@@ -19,4 +19,4 @@ build:
 
 run:
 	make build
-	./restarter
+	nohup ./restarter &

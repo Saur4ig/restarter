@@ -29,7 +29,7 @@ type Repo struct {
 
 type Conf struct {
 	ApiVersion     string   `yaml:"apiVersion"`
-	SecretParamKey string   `json:"secretParamKey"`
+	SecretParamKey string   `yaml:"secretParamKey"`
 	Folder         string   `yaml:"folder"`
 	Repo           Repo     `yaml:"repository"`
 	Endpoint       string   `yaml:"endpoint"`

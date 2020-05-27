@@ -22,5 +22,7 @@ run:
 	nohup ./restarter &
 
 re:
+	pid = pidof ./restarter
+	kill -9 $(pid)
 	rm -f nohup.out
 	make run

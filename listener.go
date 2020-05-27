@@ -33,7 +33,7 @@ func (r *Restarter) PullAndRestart(w http.ResponseWriter, req *http.Request) {
 	// is it github webhook
 	err := r.validate(req)
 	if err != nil {
-		log.Println(err.Error())
+		log.Println("failed validate " + err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -41,7 +41,7 @@ func (r *Restarter) PullAndRestart(w http.ResponseWriter, req *http.Request) {
 	// git pull in folder
 	err = r.pull()
 	if err != nil {
-		log.Println(err.Error())
+		log.Println("failed pull " + err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -49,7 +49,7 @@ func (r *Restarter) PullAndRestart(w http.ResponseWriter, req *http.Request) {
 	// restart pulled service
 	err = r.restart()
 	if err != nil {
-		log.Println(err.Error())
+		log.Println("failed restart " + err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -66,6 +66,9 @@ func (r *Restarter) restart() error {
 	cmd.Dir = r.dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	log.Println("executing command...")
+	log.Println("command - " + r.commands.Restart)
+	log.Println("dir - " + r.dir)
 	return cmd.Run()
 }
 
@@ -73,14 +76,14 @@ func (r *Restarter) restart() error {
 func (r *Restarter) pull() error {
 	repo, err := git.PlainOpen(r.dir)
 	if err != nil {
-		log.Printf("ERR - %s", err.Error())
+		log.Printf("open ERR - %s", err.Error())
 		return fmt.Errorf("failed open dir")
 	}
 
 	// Get the working directory for the repository
 	w, err := repo.Worktree()
 	if err != nil {
-		log.Printf("ERR - %s", err.Error())
+		log.Printf("worktree ERR - %s", err.Error())
 		return fmt.Errorf("failed get worktree")
 	}
 

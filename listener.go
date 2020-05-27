@@ -32,6 +32,7 @@ func (r *Restarter) PullAndRestart(w http.ResponseWriter, req *http.Request) {
 	// is it github webhook
 	err := r.validate(req)
 	if err != nil {
+		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -39,6 +40,7 @@ func (r *Restarter) PullAndRestart(w http.ResponseWriter, req *http.Request) {
 	// git pull in folder
 	err = r.pull()
 	if err != nil {
+		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -46,6 +48,7 @@ func (r *Restarter) PullAndRestart(w http.ResponseWriter, req *http.Request) {
 	// restart pulled service
 	err = r.restart()
 	if err != nil {
+		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -98,6 +101,9 @@ func (r *Restarter) validate(req *http.Request) error {
 	// if not push - ignore
 	event := req.Header.Get("x-github-event")
 	if event != "push" {
+		if event == "" || event == " " {
+			return fmt.Errorf("not alowed")
+		}
 		return fmt.Errorf("wrong github event - %s", event)
 	}
 
@@ -105,6 +111,9 @@ func (r *Restarter) validate(req *http.Request) error {
 	delivery := req.Header.Get("x-github-delivery")
 	_, err := uuid.Parse(delivery)
 	if err != nil {
+		if delivery == "" || delivery == " " {
+			return fmt.Errorf("not alowed")
+		}
 		return fmt.Errorf("wrong github delivery - %s", delivery)
 	}
 

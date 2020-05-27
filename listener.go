@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/go-git/go-git/v5"
 	gitHttp "github.com/go-git/go-git/v5/plumbing/transport/http"
@@ -29,11 +30,11 @@ func (r *Restarter) Listen(port int, endpoint string) {
 
 // first of all - pull project in folder, then restart all inside
 func (r *Restarter) PullAndRestart(w http.ResponseWriter, req *http.Request) {
-	log.Println("request -> " + req.RequestURI)
+	log.Info("request -> " + req.RequestURI)
 	// is it github webhook
 	err := r.validate(req)
 	if err != nil {
-		log.Println("failed validate " + err.Error())
+		log.Errorf("failed validate %s", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -41,7 +42,7 @@ func (r *Restarter) PullAndRestart(w http.ResponseWriter, req *http.Request) {
 	// git pull in folder
 	err = r.pull()
 	if err != nil {
-		log.Println("failed pull " + err.Error())
+		log.Errorf("failed pull %s", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -52,7 +53,7 @@ func (r *Restarter) PullAndRestart(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte("done!"))
 	if err != nil {
-		log.Println("ERR - " + err.Error())
+		log.Error(err)
 	}
 }
 
@@ -62,12 +63,15 @@ func (r *Restarter) restart() {
 	cmd.Dir = r.dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	log.Println("executing command...")
-	log.Println("command - " + r.commands.Restart)
-	log.Println("dir - " + r.dir)
+
+	log.WithFields(log.Fields{
+		"command": r.commands.Restart,
+		"dir":     r.dir,
+	}).Info("executing command...")
+
 	err := cmd.Run()
 	if err != nil {
-		log.Println("restart err - " + err.Error())
+		log.Errorf("restart err - %s", err.Error())
 	}
 }
 
@@ -75,14 +79,14 @@ func (r *Restarter) restart() {
 func (r *Restarter) pull() error {
 	repo, err := git.PlainOpen(r.dir)
 	if err != nil {
-		log.Printf("open ERR - %s", err.Error())
+		log.WithField("open", err.Error()).Error("failed open dir")
 		return fmt.Errorf("failed open dir")
 	}
 
 	// Get the working directory for the repository
 	w, err := repo.Worktree()
 	if err != nil {
-		log.Printf("worktree ERR - %s", err.Error())
+		log.WithField("worktree", err.Error()).Error("failed get worktree")
 		return fmt.Errorf("failed get worktree")
 	}
 
@@ -95,9 +99,8 @@ func (r *Restarter) pull() error {
 			},
 		},
 	)
-
 	if err != nil {
-		log.Printf("err - %s, dir - %s", err.Error(), r.dir)
+		log.WithField("dir", r.dir).Error(err)
 	}
 
 	return err
@@ -136,7 +139,7 @@ func (r *Restarter) validate(req *http.Request) error {
 	// get and check github hook body
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		log.Printf("Error reading body: %v\n", err)
+		log.Errorf("Error reading body: %v\n", err)
 		return err
 	}
 	defer req.Body.Close()
@@ -145,6 +148,7 @@ func (r *Restarter) validate(req *http.Request) error {
 	var h Hook
 	err = json.Unmarshal(body, &h)
 	if err != nil {
+		log.Error(err)
 		return err
 	}
 	// check base repository data

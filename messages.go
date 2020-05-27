@@ -7,8 +7,8 @@ import (
 	"github.com/Saur4ig/mescon"
 )
 
-func logInfo(port int, endpoint, token string) error {
-	m := fmt.Sprintf("Server started on:\nport - %d\nendpoint - %s\ntoken - %s", port, endpoint, token)
+func logInfo(port int, endpoint, token, tokenQueryKey string) error {
+	m := fmt.Sprintf("Server started on:\nport - %d\nendpoint - %s\ntoken - %s\nkey - %s", port, endpoint, token, tokenQueryKey)
 	message, err := mescon.GenMultiLineMessage(50, m, "")
 	if err != nil {
 		return err

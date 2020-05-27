@@ -20,7 +20,7 @@ func (r *Restarter) Listen(port int, endpoint string) {
 	router := mux.NewRouter()
 	router.HandleFunc(endpoint, r.PullAndRestart)
 
-	err := logInfo(port, endpoint, r.secretToken)
+	err := logInfo(port, endpoint, r.secretToken, r.secretTokenKey)
 	if err != nil {
 		log.Fatal(err)
 	}

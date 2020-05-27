@@ -47,12 +47,8 @@ func (r *Restarter) PullAndRestart(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// restart pulled service
-	err = r.restart()
-	if err != nil {
-		log.Println("failed restart " + err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	go r.restart()
+
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte("done!"))
 	if err != nil {
@@ -61,7 +57,7 @@ func (r *Restarter) PullAndRestart(w http.ResponseWriter, req *http.Request) {
 }
 
 // exec restart script inside project
-func (r *Restarter) restart() error {
+func (r *Restarter) restart() {
 	cmd := exec.Command(r.commands.Restart)
 	cmd.Dir = r.dir
 	cmd.Stdout = os.Stdout
@@ -69,7 +65,10 @@ func (r *Restarter) restart() error {
 	log.Println("executing command...")
 	log.Println("command - " + r.commands.Restart)
 	log.Println("dir - " + r.dir)
-	return cmd.Run()
+	err := cmd.Run()
+	if err != nil {
+		log.Println("restart err - " + err.Error())
+	}
 }
 
 // run git pull
@@ -96,7 +95,7 @@ func (r *Restarter) pull() error {
 			},
 		},
 	)
-	log.Println(repo)
+
 	if err != nil {
 		log.Printf("err - %s, dir - %s", err.Error(), r.dir)
 	}

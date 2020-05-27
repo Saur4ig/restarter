@@ -1,4 +1,4 @@
-.PHONY: lint, test, fmtall, all, build, run
+.PHONY: lint, test, fmtall, all, build, run, re
 
 lint:
 	golangci-lint run
@@ -20,3 +20,7 @@ build:
 run:
 	make build
 	nohup ./restarter &
+
+re:
+	rm -f nohup.out
+	make run

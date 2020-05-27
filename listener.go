@@ -29,6 +29,7 @@ func (r *Restarter) Listen(port int, endpoint string) {
 
 // first of all - pull project in folder, then restart all inside
 func (r *Restarter) PullAndRestart(w http.ResponseWriter, req *http.Request) {
+	log.Println("request -> " + req.RequestURI)
 	// is it github webhook
 	err := r.validate(req)
 	if err != nil {

@@ -93,6 +93,10 @@ func (r *Restarter) pull() error {
 			},
 		},
 	)
+	log.Println(repo)
+	if err != nil {
+		log.Printf("err - %s, dir - %s", err.Error(), r.dir)
+	}
 
 	return err
 }

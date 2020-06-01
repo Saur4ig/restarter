@@ -8,35 +8,6 @@ import (
 
 const configFilePath = ""
 
-type Commands struct {
-	Start   string `yaml:"start"`
-	Stop    string `yaml:"stop"`
-	Restart string `yaml:"restart"`
-}
-type Cr struct {
-	Login string `yaml:"login"`
-	Pass  string `yaml:"pass"`
-}
-
-type Repo struct {
-	Creds  Cr     `yaml:"creds"`
-	ID     int    `yaml:"id"`
-	Name   string `yaml:"name"`
-	Branch string `yaml:"branch"`
-	Owner  int    `yaml:"owner_id"`
-	Sender string `yaml:"sender"`
-}
-
-type Conf struct {
-	ApiVersion     string   `yaml:"apiVersion"`
-	SecretParamKey string   `yaml:"secretParamKey"`
-	Folder         string   `yaml:"folder"`
-	Repo           Repo     `yaml:"repository"`
-	Endpoint       string   `yaml:"endpoint"`
-	Port           int      `yaml:"port"`
-	Commands       Commands `yaml:"commands"`
-}
-
 func GetConfig(fileName string) (*Conf, error) {
 	dat, err := ioutil.ReadFile(configFilePath + fileName)
 	if err != nil {
@@ -50,4 +21,27 @@ func GetConfig(fileName string) (*Conf, error) {
 	}
 
 	return &conf, nil
+}
+
+func (c *Conf) genApplications() ([]Application, error) {
+	apps := make([]Application, len(c.Spec.Apps))
+
+	for i, val := range c.Spec.Apps {
+		// generate security token
+		token, err := tokenGenerator()
+		if err != nil {
+			return nil, err
+		}
+
+		app := Application{
+			token:          token,
+			folder:         val.Folder,
+			endpoint:       val.Endpoint,
+			secretParamKey: val.SecretParamKey,
+			repo:           val.Repo,
+			commands:       val.Commands,
+		}
+		apps[i] = app
+	}
+	return apps, nil
 }

@@ -1,18 +1,21 @@
 apiVersion: v1
-folder: "/etc/test/test1"
-endpoint: "/reload"
-secretParamKey: "param"
-repository:
-  creds:
-    login: "log"
-    pass: "pass"
-  id: 12345
-  name: "test"
-  branch: "master"
-  owner_id: 1235
-  sender: "SenderName"
-commands:
-  start: "./start.sh"
-  stop: "./stop.sh"
-  restart: "./restart.sh"
+spec:
+  apps:
+    - name: "test 1"
+      folder: "/etc/test/test1"
+      endpoint: "/reload"
+      secretParamKey: "param"
+      repository:
+        creds:
+          login: "log"
+          pass: "pass"
+        id: 12345
+        name: "test"
+        branch: "master"
+        owner_id: 1235
+        sender: "SenderName"
+      commands:
+        start: "./start.sh"
+        stop: "./stop.sh"
+        restart: "./restart.sh"
 port: 8585

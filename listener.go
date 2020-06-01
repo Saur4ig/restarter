@@ -17,11 +17,15 @@ import (
 )
 
 // starts listening requests
-func (r *Restarter) Listen(port int, endpoint string) {
+func (r *Restarter) Listen(port int) {
 	router := mux.NewRouter()
-	router.HandleFunc(endpoint, r.PullAndRestart)
 
-	err := logInfo(port, endpoint, r.secretToken, r.secretTokenKey)
+	// 1 app = 1 handler
+	for _, app := range r.apps {
+		router.HandleFunc(app.endpoint, app.PullAndRestart)
+	}
+
+	err := logInfo(port, r.apps)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -29,10 +33,10 @@ func (r *Restarter) Listen(port int, endpoint string) {
 }
 
 // first of all - pull project in folder, then restart all inside
-func (r *Restarter) PullAndRestart(w http.ResponseWriter, req *http.Request) {
+func (a *Application) PullAndRestart(w http.ResponseWriter, req *http.Request) {
 	log.Info("request -> " + req.RequestURI)
 	// is it github webhook
-	err := r.validate(req)
+	err := a.validate(req)
 	if err != nil {
 		log.Errorf("failed validate %s", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -40,7 +44,7 @@ func (r *Restarter) PullAndRestart(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// git pull in folder
-	err = r.pull()
+	err = a.pull()
 	if err != nil {
 		log.Errorf("failed pull %s", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -48,7 +52,7 @@ func (r *Restarter) PullAndRestart(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// restart pulled service
-	go r.restart()
+	go a.restart()
 
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte("done!"))
@@ -58,15 +62,15 @@ func (r *Restarter) PullAndRestart(w http.ResponseWriter, req *http.Request) {
 }
 
 // exec restart script inside project
-func (r *Restarter) restart() {
-	cmd := exec.Command(r.commands.Restart)
-	cmd.Dir = r.dir
+func (a *Application) restart() {
+	cmd := exec.Command(a.commands.Restart)
+	cmd.Dir = a.folder
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	log.WithFields(log.Fields{
-		"command": r.commands.Restart,
-		"dir":     r.dir,
+		"command": a.commands.Restart,
+		"dir":     a.folder,
 	}).Info("executing command...")
 
 	err := cmd.Run()
@@ -76,8 +80,8 @@ func (r *Restarter) restart() {
 }
 
 // run git pull
-func (r *Restarter) pull() error {
-	repo, err := git.PlainOpen(r.dir)
+func (a *Application) pull() error {
+	repo, err := git.PlainOpen(a.folder)
 	if err != nil {
 		log.WithField("open", err.Error()).Error("failed open dir")
 		return fmt.Errorf("failed open dir")
@@ -94,20 +98,20 @@ func (r *Restarter) pull() error {
 		&git.PullOptions{
 			RemoteName: "origin",
 			Auth: &gitHttp.BasicAuth{
-				Username: r.creds.login,
-				Password: r.creds.pass,
+				Username: a.repo.Creds.Login,
+				Password: a.repo.Creds.Pass,
 			},
 		},
 	)
 	if err != nil {
-		log.WithField("dir", r.dir).Error(err)
+		log.WithField("dir", a.folder).Error(err)
 	}
 
 	return err
 }
 
 // it should be github hook with generated token inside
-func (r *Restarter) validate(req *http.Request) error {
+func (a *Application) validate(req *http.Request) error {
 	// if not push - ignore
 	event := req.Header.Get("x-github-event")
 	if event != "push" {
@@ -128,11 +132,11 @@ func (r *Restarter) validate(req *http.Request) error {
 	}
 
 	// get generated token
-	tokens, ok := req.URL.Query()[r.secretTokenKey]
+	tokens, ok := req.URL.Query()[a.secretParamKey]
 	if !ok {
 		return fmt.Errorf("secret token missing")
 	}
-	if tokens[0] != r.secretToken {
+	if tokens[0] != a.token {
 		return fmt.Errorf("%s secret token is invalid", tokens[0])
 	}
 
@@ -152,16 +156,16 @@ func (r *Restarter) validate(req *http.Request) error {
 		return err
 	}
 	// check base repository data
-	if h.Repository.ID != r.repo.ID {
+	if h.Repository.ID != a.repo.ID {
 		return fmt.Errorf("wrong repository id - %d", h.Repository.ID)
 	}
-	if h.Repository.Name != r.repo.Name {
+	if h.Repository.Name != a.repo.Name {
 		return fmt.Errorf("wrong repository name - %s", h.Repository.Name)
 	}
-	if h.Repository.Owner.ID != r.repo.Owner {
+	if h.Repository.Owner.ID != a.repo.Owner {
 		return fmt.Errorf("wrong owner id - %d", h.Repository.Owner.ID)
 	}
-	if h.Sender.Login != r.repo.Sender {
+	if h.Sender.Login != a.repo.Sender {
 		return fmt.Errorf("wrong sender - %s", h.Sender.Login)
 	}
 	return nil

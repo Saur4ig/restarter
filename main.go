@@ -7,20 +7,13 @@ func main() {
 		panic(err)
 	}
 
-	// generate security token
-	token, err := tokenGenerator()
+	// get applications with token
+	applications, err := conf.genApplications()
 	if err != nil {
 		panic(err)
 	}
 
-	restarter := newRestarter(
-		token,
-		conf.Folder,
-		conf.SecretParamKey,
-		conf.Commands,
-		conf.Repo,
-		conf.Repo.Creds.Login,
-		conf.Repo.Creds.Pass,
-	)
-	restarter.Listen(conf.Port, conf.Endpoint)
+	// starts all logic
+	restarter := newRestarter(applications)
+	restarter.Listen(conf.Port)
 }

@@ -14,6 +14,5 @@ func main() {
 	}
 
 	// starts all logic
-	restarter := newRestarter(applications)
-	restarter.Listen(conf.Port)
+	newRestarter(applications).Listen(conf.Port)
 }
